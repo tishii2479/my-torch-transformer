@@ -4,6 +4,14 @@ from torch import Tensor
 import torch.nn.functional as F
 
 
+def add_norm(
+    output: Tensor,
+    x: Tensor,
+    normalized_shape: int
+):
+    return F.layer_norm(output + x, [normalized_shape])
+
+
 def attention(
     Q: Tensor,
     K: Tensor,

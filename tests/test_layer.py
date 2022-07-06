@@ -1,5 +1,4 @@
 from math import sqrt
-from sys import stderr
 import unittest
 import torch
 import torch.nn.functional as F
@@ -10,21 +9,21 @@ from function import *
 
 class TestLayer(unittest.TestCase):
     def setUp(self):
-        self.d_model = 512
+        self.embedding_size = 512
         self.batch_size = 64
         self.sequence_length = 16
 
     def test_feed_forward_network(self):
-        shape = (self.batch_size, self.sequence_length, self.d_model)
+        shape = (self.batch_size, self.sequence_length, self.embedding_size)
         d_ff = 2048
-        ffn = FeedForwardNetwork(self.d_model, d_ff)
+        ffn = FeedForwardNetwork(self.embedding_size, d_ff)
 
         x = torch.rand(shape)
         y = ffn.forward(x)
         self.assertEqual(y.shape, shape)
 
     def test_attention(self):
-        shape = (self.batch_size, self.sequence_length, self.d_model)
+        shape = (self.batch_size, self.sequence_length, self.embedding_size)
         Q = torch.rand(shape)
         K = torch.rand(shape)
         V = torch.rand(shape)
@@ -58,22 +57,33 @@ class TestLayer(unittest.TestCase):
             y[0][1][2], torch.tensor(0.)), f'actual={y}')
 
     def test_multi_head_attention(self):
-        shape = (self.batch_size, self.sequence_length, self.d_model)
-        xs = torch.rand(shape)
+        shape = (self.batch_size, self.sequence_length, self.embedding_size)
+        x = torch.rand(shape)
         h = 8
 
-        multiHeadAttention = MultiHeadAttention(h, self.d_model)
-        y = multiHeadAttention.forward(xs, xs, xs)
+        multiHeadAttention = MultiHeadAttention(h, self.embedding_size)
+        y = multiHeadAttention.forward(x, x, x)
         self.assertEqual(y.shape, shape)
 
     def test_sub_feed_forward_network(self):
-        shape = (self.batch_size, self.sequence_length, self.d_model)
+        shape = (self.batch_size, self.sequence_length, self.embedding_size)
         d_ff = 2048
-        ffn = FeedForwardNetwork(self.d_model, d_ff)
-        sublayer_ffn = SubLayer(ffn, self.d_model)
+        ffn = FeedForwardNetwork(self.embedding_size, d_ff)
 
         x = torch.rand(shape)
-        y = sublayer_ffn.forward(x)
+        y = ffn.forward(x)
+        y = add_norm(x, y, self.embedding_size)
+        self.assertEqual(y.shape, shape)
+
+    def test_sub_multi_head_attention(self):
+        shape = (self.batch_size, self.sequence_length, self.embedding_size)
+        x = torch.rand(shape)
+        h = 8
+
+        mh_attention = MultiHeadAttention(h, self.embedding_size)
+
+        y = mh_attention.forward(x, x, x)
+        y = add_norm(x, y, self.embedding_size)
         self.assertEqual(y.shape, shape)
 
 

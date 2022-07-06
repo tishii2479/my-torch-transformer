@@ -1,5 +1,3 @@
-from math import sqrt
-import numpy as np
 from torch import Tensor, nn
 import torch
 import torch.nn.functional as F
@@ -9,28 +7,11 @@ from function import attention
 # https://www.bigdata-navi.com/aidrops/2890/
 
 
-class SubLayer(nn.Module):
-    def __init__(
-        self,
-        subLayer: nn.Module,
-        d_model: int
-    ):
-        super().__init__()
-        self.subLayer = subLayer
-        self.layer_norm = nn.LayerNorm(d_model)
-
-    def forward(self, x):
-        '''
-        x = (batch_size, sequence_length, d_model)
-        '''
-        return self.layer_norm.forward(self.subLayer.forward(x) + x)
-
-
 class MultiHeadAttention(nn.Module):
     def __init__(
         self,
         h: int,
-        d_model: int,
+        embedding_size: int,
         is_masked: bool = False,
         d_k: int = None,
         d_v: int = None
@@ -38,14 +19,14 @@ class MultiHeadAttention(nn.Module):
         super().__init__()
         self.h = h
         self.is_masked = is_masked
-        self.d_k = d_model // h if d_k is None else d_k
-        self.d_v = d_model // h if d_v is None else d_v
+        self.d_k = embedding_size // h if d_k is None else d_k
+        self.d_v = embedding_size // h if d_v is None else d_v
 
-        self.lq = nn.Linear(d_model, self.d_k * h, bias=False)
-        self.lk = nn.Linear(d_model, self.d_k * h, bias=False)
-        self.lv = nn.Linear(d_model, self.d_v * h, bias=False)
+        self.lq = nn.Linear(embedding_size, self.d_k * h, bias=False)
+        self.lk = nn.Linear(embedding_size, self.d_k * h, bias=False)
+        self.lv = nn.Linear(embedding_size, self.d_v * h, bias=False)
 
-        self.lo = nn.Linear(h * self.d_v, d_model, bias=False)
+        self.lo = nn.Linear(h * self.d_v, embedding_size, bias=False)
 
     def forward(
         self,
@@ -54,11 +35,11 @@ class MultiHeadAttention(nn.Module):
         V: Tensor
     ):
         '''
-        Q = (batch_size, sequence_length, d_model)
-        K = (batch_size, sequence_length, d_model)
-        V = (batch_size, sequence_length, d_model)
+        Q = (batch_size, sequence_length, embedding_size)
+        K = (batch_size, sequence_length, embedding_size)
+        V = (batch_size, sequence_length, embedding_size)
 
-        return (batch_size, sequence_length, d_model)
+        return (batch_size, sequence_length, embedding_size)
         '''
         Q = self.lq.forward(Q)
         K = self.lk.forward(K)
@@ -81,17 +62,17 @@ class MultiHeadAttention(nn.Module):
 class FeedForwardNetwork(nn.Module):
     def __init__(
         self,
-        d_model: int,
-        d_ff: int,
+        embedding_size: int,
+        hidden_size: int,
         activation: lambda x: x = F.relu
     ):
         super().__init__()
-        self.l1 = nn.Linear(d_model, d_ff)
-        self.l2 = nn.Linear(d_ff, d_model)
+        self.l1 = nn.Linear(embedding_size, hidden_size)
+        self.l2 = nn.Linear(hidden_size, embedding_size)
         self.activation = activation
 
     def forward(self, x: Tensor):
         '''
-        x = (batch_size, sequence_length, d_model)
+        x = (batch_size, sequence_length, embedding_size)
         '''
         return self.l2.forward(self.activation(self.l1.forward(x)))
