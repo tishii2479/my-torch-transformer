@@ -31,11 +31,13 @@ class MultiHeadAttention(nn.Module):
         self,
         h: int,
         d_model: int,
+        is_masked: bool = False,
         d_k: int = None,
         d_v: int = None
     ):
         super().__init__()
         self.h = h
+        self.is_masked = is_masked
         self.d_k = d_model // h if d_k is None else d_k
         self.d_v = d_model // h if d_v is None else d_v
 
@@ -68,7 +70,8 @@ class MultiHeadAttention(nn.Module):
             head_i = attention(
                 Q[:, :, i * self.d_k: (i+1) * self.d_k],
                 K[:, :, i * self.d_k: (i+1) * self.d_k],
-                V[:, :, i * self.d_v: (i+1) * self.d_v]
+                V[:, :, i * self.d_v: (i+1) * self.d_v],
+                self.is_masked
             )
             heads.append(head_i)
 

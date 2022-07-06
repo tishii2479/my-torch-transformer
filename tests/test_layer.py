@@ -41,8 +41,21 @@ class TestLayer(unittest.TestCase):
         y = attention(Q, K, V)
         expected = torch.matmul(
             F.softmax(torch.div(torch.matmul(Q, K.transpose(1, 2)), sqrt(d_k)), dim=2), V.reshape(3, 3))
-        # print('expected is:', expected)
-        self.assertTrue(torch.equal(y, expected.reshape(Q.shape)))
+        self.assertTrue(torch.equal(y, expected.reshape(Q.shape)),
+                        f'actual={y}, expected={expected}')
+
+    def test_masked_attention_value(self):
+        Q = torch.tensor([[[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]])
+        K = torch.tensor([[[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]])
+        V = torch.tensor([[[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]])
+
+        y = attention(Q, K, V, is_masked=True)
+        self.assertTrue(torch.equal(
+            y[0][0][1], torch.tensor(0.)), f'actual={y}')
+        self.assertTrue(torch.equal(
+            y[0][0][2], torch.tensor(0.)), f'actual={y}')
+        self.assertTrue(torch.equal(
+            y[0][1][2], torch.tensor(0.)), f'actual={y}')
 
     def test_multi_head_attention(self):
         shape = (self.batch_size, self.sequence_length, self.d_model)
